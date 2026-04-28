@@ -4,7 +4,7 @@
 <head>
   <title>WireGuard</title>
   <meta charset="utf-8"/>
-  <link href="./css/app.css?v=2" rel="stylesheet">
+  <link href="./css/app.css?v=3" rel="stylesheet">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/png" href="./img/favicon.png">
   <link rel="apple-touch-icon" href="./img/apple-touch-icon.png">
@@ -421,12 +421,12 @@
                       </template>
                       <!-- Edit Mode -->
                       <template v-else>
-                        <select v-model="editingPfRule.proto" class="text-xs font-bold bg-gray-50 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-500 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-red-800 outline-none">
-                          <option value="tcp">TCP</option><option value="udp">UDP</option>
+                        <select v-model="editingPfRule.proto" class="text-xs font-bold text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-500 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-red-800 outline-none">
+                          <option value="tcp" class="bg-white dark:bg-neutral-800">TCP</option><option value="udp" class="bg-white dark:bg-neutral-800">UDP</option>
                         </select>
-                        <input v-model.number="editingPfRule.extPort" type="number" class="font-mono text-sm bg-gray-50 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-500 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-red-800 outline-none w-full" />
+                        <input v-model.number="editingPfRule.extPort" type="number" class="font-mono text-sm text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-500 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-red-800 outline-none w-full" />
                         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                        <input v-model.number="editingPfRule.intPort" type="number" class="font-mono text-sm bg-gray-50 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-500 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-red-800 outline-none w-full" />
+                        <input v-model.number="editingPfRule.intPort" type="number" class="font-mono text-sm text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-500 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-red-800 outline-none w-full" />
                         <div class="flex items-center gap-1 justify-end">
                           <button @click="updatePortForward(client)" class="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-md transition-colors" title="Save">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -442,12 +442,12 @@
                   <!-- Add New Rule -->
                   <div class="bg-white dark:bg-neutral-700/50 p-3 rounded-lg border border-dashed border-gray-300 dark:border-neutral-600">
                     <div class="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                      <select v-model="newPf[client.id].proto" class="text-xs font-bold bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-shrink-0">
-                        <option value="tcp">TCP</option><option value="udp">UDP</option>
+                      <select v-model="newPf[client.id].proto" class="text-xs font-bold text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-shrink-0">
+                        <option value="tcp" class="bg-white dark:bg-neutral-800">TCP</option><option value="udp" class="bg-white dark:bg-neutral-800">UDP</option>
                       </select>
-                      <input v-model.number="newPf[client.id].extPort" type="number" placeholder="External Port (e.g. 8080)" class="text-sm font-mono bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-grow min-w-[100px]" />
+                      <input v-model.number="newPf[client.id].extPort" type="number" placeholder="External Port (e.g. 8080)" class="text-sm font-mono text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-grow min-w-[100px]" />
                       <svg class="w-4 h-4 text-gray-400 flex-shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                      <input v-model.number="newPf[client.id].intPort" type="number" placeholder="Internal Port (e.g. 80)" class="text-sm font-mono bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-grow min-w-[100px]" />
+                      <input v-model.number="newPf[client.id].intPort" type="number" placeholder="Internal Port (e.g. 80)" class="text-sm font-mono text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-grow min-w-[100px]" />
                       <button @click="addPortForward(client)" class="flex items-center justify-center gap-2 bg-red-800 hover:bg-red-700 text-white font-medium text-sm px-4 py-2 rounded-md shadow-sm transition-colors flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                         Add Rule
@@ -787,7 +787,8 @@
 
     <p v-cloak class="text-center m-10 text-gray-300 dark:text-neutral-600 text-xs"> <a class="hover:underline" target="_blank"
         href="https://github.com/wg-easy/wg-easy">WireGuard Easy</a> © 2021-2024 by <a class="hover:underline" target="_blank"
-        href="https://emilenijssen.nl/?ref=wg-easy">Emile Nijssen</a> is licensed under <a class="hover:underline" target="_blank"
+        href="https://emilenijssen.nl/?ref=wg-easy">Emile Nijssen</a> · Fork by <a class="hover:underline" target="_blank"
+        href="https://github.com/ydtoloza">ydtoloza</a> is licensed under <a class="hover:underline" target="_blank"
         href="http://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> · <a class="hover:underline"
         href="https://github.com/sponsors/WeeJeWel" target="_blank">{{$t("donate")}}</a></p>
 
