@@ -57,6 +57,7 @@ new Vue({
     clients: null,
     clientsPersist: {},
     clientDelete: null,
+    pfDelete: null,
     clientCreate: null,
     clientCreateName: '',
     clientEditName: null,
@@ -365,10 +366,17 @@ new Vue({
       .finally(() => this.refresh().catch(console.error));
     },
     removePortForward(client, index) {
-      if (!confirm('¿Eliminar esta regla de redirección?')) return;
+      this.pfDelete = { client, index, rule: client.portForwards[index] };
+    },
+    confirmRemovePortForward() {
+      if (!this.pfDelete) return;
+      const { client, index } = this.pfDelete;
       this.api.removePortForward({ clientId: client.id, index })
         .catch((err) => alert(err.message || err.toString()))
-        .finally(() => this.refresh().catch(console.error));
+        .finally(() => {
+          this.pfDelete = null;
+          this.refresh().catch(console.error);
+        });
     },
     editPortForward(client, index) {
       this.editingPfClientId = client.id;
