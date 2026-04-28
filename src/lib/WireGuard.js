@@ -190,6 +190,11 @@ ${client.preSharedKey ? `PresharedKey = ${client.preSharedKey}\n` : ''
         updatedAt: new Date(),
         transferRx: 1024 * 1024 * 500,
         transferTx: 1024 * 1024 * 120,
+        allowedIPs: ['10.8.0.2/32'],
+        publicKey: 'mockPublicKey=',
+        downloadableConfig: false,
+        persistentKeepalive: null,
+        latestHandshakeAt: new Date(),
         portForwards: [
           { proto: 'tcp', extPort: 8080, intPort: 80 },
           { proto: 'udp', extPort: 27015, intPort: 27015 }
