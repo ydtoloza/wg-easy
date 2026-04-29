@@ -2,9 +2,9 @@ volumes:
   etc_wireguard:
 
 services:
-  wg-easy:
-    image: ghcr.io/ydtoloza/wg-easy:latest
-    container_name: wg-easy
+  wg-easy-port-manager:
+    image: ghcr.io/ydtoloza/wg-easy-port-manager:latest
+    container_name: wg-easy-port-manager
     environment:
       - LANG=es
       - WG_HOST=209.141.61.72

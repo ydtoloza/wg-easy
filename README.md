@@ -1,4 +1,4 @@
-# WG-Easy (Advanced Fork)
+# WG-Easy Port Manager (Advanced Fork)
 
 <p align="center">
   <img src="https://github.com/wg-easy/wg-easy/raw/master/Hero.png" alt="WG-Easy Hero" />
@@ -45,9 +45,9 @@ volumes:
   etc_wireguard:
 
 services:
-  wg-easy:
-    image: ghcr.io/ydtoloza/wg-easy:latest
-    container_name: wg-easy
+  wg-easy-port-manager:
+    image: ghcr.io/ydtoloza/wg-easy-port-manager:latest
+    container_name: wg-easy-port-manager
     environment:
       - LANG=es # Idioma de la interfaz
       - WG_HOST=TU_IP_PUBLICA # Cambia por la IP pública de tu servidor
@@ -106,9 +106,9 @@ volumes:
   etc_wireguard:
 
 services:
-  wg-easy:
-    image: ghcr.io/ydtoloza/wg-easy:latest
-    container_name: wg-easy
+  wg-easy-port-manager:
+    image: ghcr.io/ydtoloza/wg-easy-port-manager:latest
+    container_name: wg-easy-port-manager
     environment:
       - LANG=en # Set UI Language
       - WG_HOST=YOUR_SERVER_IP # Change to your server's public IP
@@ -132,4 +132,4 @@ services:
 
 ## 🤝 Credits & Upstream
 
-All credit for the original design and core application architecture goes to [Weejewel](https://github.com/weejewel/wg-easy). Developed and maintained as a fork by [ydtoloza](https://github.com/ydtoloza).
+All credit for the original design and core application architecture goes to [Weejewel](https://github.com/weejewel/wg-easy). Developed and maintained as a fork by [ydtoloza](https://github.com/ydtoloza/wg-easy-port-manager).
