@@ -66,10 +66,15 @@ new Vue({
     clientEditAddressId: null,
     qrcode: null,
     newPf: {},
+    pfError: null,
     editingPfClientId: null,
     editingPfIndex: null,
     editingPfRule: {},
     expandedPfClients: {},
+
+    // Toast notifications
+    toasts: [],
+    _toastId: 0,
 
     // Server config (global IP settings)
     showServerConfig: false,
@@ -112,7 +117,7 @@ new Vue({
           shade: 'dark',
           type: 'vertical',
           shadeIntensity: 0,
-          gradientToColors: CHART_COLORS.gradient[this.theme],
+          gradientToColors: CHART_COLORS.gradient.dark,
           inverseColors: false,
           opacityTo: 0,
           stops: [0, 100],
@@ -169,6 +174,18 @@ new Vue({
     },
   },
   methods: {
+    // ── Toast notification system ─────────────────────────────────────────
+    notify(msg, type = 'error', duration = 5000) {
+      const id = ++this._toastId;
+      this.toasts.push({ id, msg, type });
+      setTimeout(() => this.dismissToast(id), duration);
+    },
+    dismissToast(id) {
+      const idx = this.toasts.findIndex(t => t.id === id);
+      if (idx !== -1) this.toasts.splice(idx, 1);
+    },
+    // ─────────────────────────────────────────────────────────────────────
+
     dateTime: (value) => {
       return new Intl.DateTimeFormat(undefined, {
         year: 'numeric',
@@ -218,12 +235,6 @@ new Vue({
         if (client.portForwards && client.portForwards.length > 0 && this.expandedPfClients[client.id] === undefined) {
           this.$set(this.expandedPfClients, client.id, true);
         }
-
-        // Debug
-        // client.transferRx = this.clientsPersist[client.id].transferRxPrevious + Math.random() * 1000;
-        // client.transferTx = this.clientsPersist[client.id].transferTxPrevious + Math.random() * 1000;
-        // client.latestHandshakeAt = new Date();
-        // this.requiresPassword = true;
 
         this.clientsPersist[client.id].transferRxCurrent = client.transferRx - this.clientsPersist[client.id].transferRxPrevious;
         this.clientsPersist[client.id].transferRxPrevious = client.transferRx;
@@ -281,7 +292,7 @@ new Vue({
           return this.refresh();
         })
         .catch((err) => {
-          alert(err.message || err.toString());
+          this.notify(err.message || err.toString());
         })
         .finally(() => {
           this.authenticating = false;
@@ -297,7 +308,7 @@ new Vue({
           this.clients = null;
         })
         .catch((err) => {
-          alert(err.message || err.toString());
+          this.notify(err.message || err.toString());
         });
     },
     createClient() {
@@ -305,32 +316,32 @@ new Vue({
       if (!name) return;
 
       this.api.createClient({ name })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },
     deleteClient(client) {
       this.api.deleteClient({ clientId: client.id })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },
     enableClient(client) {
       this.api.enableClient({ clientId: client.id })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },
     disableClient(client) {
       this.api.disableClient({ clientId: client.id })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },
     updateClientName(client, name) {
       this.api.updateClientName({ clientId: client.id, name })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },
     updateClientAddress(client, address) {
       this.api.updateClientAddress({ clientId: client.id, address })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },
     restoreConfig(e) {
@@ -340,29 +351,47 @@ new Vue({
         file.text()
           .then((content) => {
             this.api.restoreConfiguration(content)
-              .then((_result) => alert('The configuration was updated.'))
-              .catch((err) => alert(err.message || err.toString()))
+              .then(() => this.notify('La configuración fue actualizada correctamente.', 'success'))
+              .catch((err) => this.notify(err.message || err.toString()))
               .finally(() => this.refresh().catch(console.error));
           })
-          .catch((err) => alert(err.message || err.toString()));
+          .catch((err) => this.notify(err.message || err.toString()));
       } else {
-        alert('Failed to load your file!');
+        this.notify('Error al cargar el archivo.');
       }
     },
     addPortForward(client) {
       const pf = this.newPf[client.id];
       if (!pf || !pf.extPort || !pf.intPort) return;
+
+      this.pfError = null;
+
+      // Client-side duplicate check (all peers)
+      const extPort = Number(pf.extPort);
+      const proto = pf.proto || 'tcp';
+      const alreadyUsed = this.clients.some(c =>
+        Array.isArray(c.portForwards) &&
+        c.portForwards.some(r => r.proto === proto && r.extPort === extPort)
+      );
+      if (alreadyUsed) {
+        this.pfError = { clientId: client.id, msg: `El puerto ${proto}/${extPort} ya está en uso.` };
+        return;
+      }
+
       this.api.addPortForward({
         clientId: client.id,
-        proto: pf.proto || 'tcp',
-        extPort: pf.extPort,
+        proto,
+        extPort,
         intPort: pf.intPort
       })
       .then(() => {
         this.$set(this.newPf, client.id, { proto: 'tcp', extPort: null, intPort: null });
         this.$set(this.expandedPfClients, client.id, true);
+        this.pfError = null;
       })
-      .catch((err) => alert(err.message || err.toString()))
+      .catch((err) => {
+        this.pfError = { clientId: client.id, msg: err.message || err.toString() };
+      })
       .finally(() => this.refresh().catch(console.error));
     },
     removePortForward(client, index) {
@@ -372,7 +401,7 @@ new Vue({
       if (!this.pfDelete) return;
       const { client, index } = this.pfDelete;
       this.api.removePortForward({ clientId: client.id, index })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => {
           this.pfDelete = null;
           this.refresh().catch(console.error);
@@ -390,17 +419,39 @@ new Vue({
     },
     updatePortForward(client) {
       if (!this.editingPfRule || !this.editingPfRule.extPort || !this.editingPfRule.intPort) return;
+
+      this.pfError = null;
+
+      // Client-side duplicate check (skip current rule being edited)
+      const extPort = Number(this.editingPfRule.extPort);
+      const proto = this.editingPfRule.proto || 'tcp';
+      const idx = this.editingPfIndex;
+      const alreadyUsed = this.clients.some(c =>
+        Array.isArray(c.portForwards) &&
+        c.portForwards.some((r, i) => {
+          if (c.id === client.id && i === idx) return false;
+          return r.proto === proto && r.extPort === extPort;
+        })
+      );
+      if (alreadyUsed) {
+        this.pfError = { clientId: client.id, msg: `El puerto ${proto}/${extPort} ya está en uso.` };
+        return;
+      }
+
       this.api.updatePortForward({
         clientId: client.id,
-        index: this.editingPfIndex,
-        proto: this.editingPfRule.proto || 'tcp',
-        extPort: this.editingPfRule.extPort,
+        index: idx,
+        proto,
+        extPort,
         intPort: this.editingPfRule.intPort
       })
       .then(() => {
         this.cancelEditPortForward();
+        this.pfError = null;
       })
-      .catch((err) => alert(err.message || err.toString()))
+      .catch((err) => {
+        this.pfError = { clientId: client.id, msg: err.message || err.toString() };
+      })
       .finally(() => this.refresh().catch(console.error));
     },
     // Server Config methods
@@ -412,7 +463,7 @@ new Vue({
           this.serverConfigEdit = { ...config };
           this.showServerConfig = true;
         })
-        .catch((err) => alert(err.message || err.toString()));
+        .catch((err) => this.notify(err.message || err.toString()));
     },
     closeServerConfig() {
       this.showServerConfig = false;
@@ -426,8 +477,9 @@ new Vue({
           this.serverConfig = result;
           this.showServerConfig = false;
           this.serverConfigEdit = null;
+          this.notify('Configuración del servidor guardada.', 'success');
         })
-        .catch((err) => alert(err.message || err.toString()))
+        .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => {
           this.serverConfigSaving = false;
         });
@@ -472,11 +524,11 @@ new Vue({
         this.refresh({
           updateCharts: this.updateCharts,
         }).catch((err) => {
-          alert(err.message || err.toString());
+          this.notify(err.message || err.toString());
         });
       })
       .catch((err) => {
-        alert(err.message || err.toString());
+        this.notify(err.message || err.toString());
       });
 
     setInterval(() => {

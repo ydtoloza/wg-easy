@@ -19,10 +19,45 @@
   .line-chart .apexcharts-svg{
     transform: translateY(3px);
   }
+  /* Toast animations */
+  .toast-enter-active, .toast-leave-active { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .toast-enter { opacity: 0; transform: translateX(60px); }
+  .toast-leave-to { opacity: 0; transform: translateX(60px); }
+  .toast-move { transition: transform 0.3s ease; }
 </style>
 
 <body class="bg-gray-50 dark:bg-neutral-800">
   <div id="app">
+
+    <!-- ── Toast Notifications ─────────────────────────────── -->
+    <div v-cloak class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 items-end" style="max-width: 380px;">
+      <transition-group name="toast">
+        <div v-for="toast in toasts" :key="toast.id"
+          class="flex items-start gap-3 px-4 py-3 rounded-xl shadow-2xl border cursor-pointer w-full"
+          :class="toast.type === 'success'
+            ? 'bg-neutral-800 dark:bg-neutral-900 border-green-500/40 text-green-300'
+            : toast.type === 'info'
+            ? 'bg-neutral-800 dark:bg-neutral-900 border-blue-500/40 text-blue-300'
+            : 'bg-neutral-800 dark:bg-neutral-900 border-red-500/40 text-red-300'"
+          @click="dismissToast(toast.id)">
+          <!-- Icon -->
+          <svg v-if="toast.type === 'success'" class="w-5 h-5 flex-shrink-0 mt-0.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <svg v-else class="w-5 h-5 flex-shrink-0 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <!-- Message -->
+          <span class="text-sm font-medium leading-snug">{{ toast.msg }}</span>
+          <!-- Dismiss -->
+          <button class="ml-auto pl-2 opacity-60 hover:opacity-100 transition-opacity flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </transition-group>
+    </div>
+    <!-- ────────────────────────────────────────────────────── -->
+
     <div v-cloak class="container mx-auto max-w-3xl px-3 md:px-0 mt-4 xs:mt-6">
       <div v-if="authenticated === true">
         <div class="flex flex-col-reverse xxs:flex-row flex-auto items-center items-end gap-3">
@@ -445,12 +480,22 @@
                       <select v-model="newPf[client.id].proto" class="text-xs font-bold text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-shrink-0">
                         <option value="tcp" class="bg-white dark:bg-neutral-800">TCP</option><option value="udp" class="bg-white dark:bg-neutral-800">UDP</option>
                       </select>
-                      <input v-model.number="newPf[client.id].extPort" type="number" placeholder="External Port (e.g. 8080)" class="text-sm font-mono text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-grow min-w-[100px]" />
+                      <input v-model.number="newPf[client.id].extPort" type="number" placeholder="External Port (e.g. 8080)" @input="pfError = null" class="text-sm font-mono text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-grow min-w-[100px]" />
                       <svg class="w-4 h-4 text-gray-400 flex-shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                       <input v-model.number="newPf[client.id].intPort" type="number" placeholder="Internal Port (e.g. 80)" class="text-sm font-mono text-gray-700 dark:text-neutral-200 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-red-800 outline-none flex-grow min-w-[100px]" />
                       <button @click="addPortForward(client)" class="flex items-center justify-center gap-2 bg-red-800 hover:bg-red-700 text-white font-medium text-sm px-4 py-2 rounded-md shadow-sm transition-colors flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                         Add Rule
+                      </button>
+                    </div>
+                    <!-- Inline error message -->
+                    <div v-if="pfError && pfError.clientId === client.id"
+                      class="flex items-center gap-3 mt-3 px-4 py-3 rounded-lg border text-sm font-medium"
+                      style="background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.35); color: #fca5a5;">
+                      <svg class="w-4 h-4 flex-shrink-0" style="color:#f87171" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      <span>{{ pfError.msg }}</span>
+                      <button @click="pfError = null" class="ml-auto opacity-70 hover:opacity-100 transition-opacity" style="color:#f87171">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
                     </div>
                   </div>

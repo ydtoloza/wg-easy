@@ -25,6 +25,26 @@ const {
   WG_POST_DOWN,
 } = require('../config');
 
+const DUMMY_CLIENT_PREVIEW = {
+  id: 'dummy-client-preview',
+  name: 'Preview Client (Local)',
+  address: '10.8.0.2',
+  enabled: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  transferRx: 1024 * 1024 * 500,
+  transferTx: 1024 * 1024 * 120,
+  allowedIPs: ['10.8.0.2/32'],
+  publicKey: 'mockPublicKey=',
+  downloadableConfig: false,
+  persistentKeepalive: null,
+  latestHandshakeAt: new Date(),
+  portForwards: [
+    { proto: 'tcp', extPort: 8080, intPort: 80 },
+    { proto: 'udp', extPort: 27015, intPort: 27015 }
+  ]
+};
+
 module.exports = class WireGuard {
 
   constructor() {
@@ -181,25 +201,7 @@ ${client.preSharedKey ? `PresharedKey = ${client.preSharedKey}\n` : ''
 
   async getClients() {
     if (process.platform !== 'linux') {
-      return [{
-        id: 'dummy-client-preview',
-        name: 'Preview Client (Local)',
-        address: '10.8.0.2',
-        enabled: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        transferRx: 1024 * 1024 * 500,
-        transferTx: 1024 * 1024 * 120,
-        allowedIPs: ['10.8.0.2/32'],
-        publicKey: 'mockPublicKey=',
-        downloadableConfig: false,
-        persistentKeepalive: null,
-        latestHandshakeAt: new Date(),
-        portForwards: [
-          { proto: 'tcp', extPort: 8080, intPort: 80 },
-          { proto: 'udp', extPort: 27015, intPort: 27015 }
-        ]
-      }];
+      return [DUMMY_CLIENT_PREVIEW];
     }
 
     const config = await this.getConfig();
@@ -496,34 +498,57 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
   }
 
   async addPortForward(clientId, proto, extPort, intPort) {
+    if (process.platform !== 'linux') {
+      debug('Preview: Simulated adding port forward');
+      DUMMY_CLIENT_PREVIEW.portForwards.push({ proto, extPort: Number(extPort), intPort: Number(intPort) });
+      return;
+    }
     const config = await this.getConfig();
     const client = config.clients[clientId];
-    if (!client) throw new ServerError('Client not found', 404);
+    if (!client) throw new ServerError(`Client not found: ${clientId}`, 404);
 
     if (!Array.isArray(client.portForwards)) client.portForwards = [];
 
-    // Validate extPort not already used by another peer
-    const conflict = Object.values(config.clients).some(c =>
-      c.id !== clientId &&
-      Array.isArray(c.portForwards) &&
-      c.portForwards.some(r => r.proto === proto && r.extPort === extPort)
-    );
-    if (conflict) throw new ServerError(`Puerto ${proto}/${extPort} ya está asignado a otro peer`, 400);
-
-    // Block the WireGuard port
-    if (extPort === Number(this.__serverSettings.port)) {
-      throw new ServerError(`El puerto ${this.__serverSettings.port} está reservado para WireGuard`, 400);
+    // Validate port range
+    const port = Number(extPort);
+    if (!port || port < 1 || port > 65535) {
+      throw new ServerError('Puerto externo inválido (debe ser 1–65535)', 400);
     }
 
-    client.portForwards.push({ proto, extPort: Number(extPort), intPort: Number(intPort) });
+    // Block reserved ports (WG and admin panel)
+    if (port === Number(this.__serverSettings.port)) {
+      throw new ServerError(`El puerto ${port} está reservado para WireGuard`, 400);
+    }
+    if (port === Number(this.__serverSettings.configPort)) {
+      throw new ServerError(`El puerto ${port} está reservado para el panel de administración`, 400);
+    }
+
+    // Validate extPort not already used by the same peer
+    const selfConflict = client.portForwards.some(r => r.proto === proto && r.extPort === port);
+    if (selfConflict) throw new ServerError(`El puerto ${proto}/${port} ya está configurado en este peer`, 400);
+
+    // Validate extPort not already used by another peer
+    const crossConflict = Object.values(config.clients).some(c =>
+      c.id !== clientId &&
+      Array.isArray(c.portForwards) &&
+      c.portForwards.some(r => r.proto === proto && r.extPort === port)
+    );
+    if (crossConflict) throw new ServerError(`El puerto ${proto}/${port} ya está asignado a otro peer`, 400);
+
+    client.portForwards.push({ proto, extPort: port, intPort: Number(intPort) });
     await this.saveConfig();
     await this.__applyAllDnatRules();
   }
 
   async removePortForward(clientId, index) {
+    if (process.platform !== 'linux') {
+      debug('Preview: Simulated removing port forward');
+      DUMMY_CLIENT_PREVIEW.portForwards.splice(index, 1);
+      return;
+    }
     const config = await this.getConfig();
     const client = config.clients[clientId];
-    if (!client) throw new ServerError('Client not found', 404);
+    if (!client) throw new ServerError(`Client not found: ${clientId}`, 404);
 
     if (Array.isArray(client.portForwards) && client.portForwards.length > index) {
       client.portForwards.splice(index, 1);
@@ -533,31 +558,50 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
   }
 
   async updatePortForward(clientId, index, proto, extPort, intPort) {
+    if (process.platform !== 'linux') {
+      debug('Preview: Simulated updating port forward');
+      DUMMY_CLIENT_PREVIEW.portForwards[index] = { proto, extPort: Number(extPort), intPort: Number(intPort) };
+      return;
+    }
     const config = await this.getConfig();
     const client = config.clients[clientId];
-    if (!client) throw new ServerError('Client not found', 404);
+    if (!client) throw new ServerError(`Client not found: ${clientId}`, 404);
 
     if (!Array.isArray(client.portForwards) || client.portForwards.length <= index) {
       throw new ServerError('Port forward rule not found', 404);
     }
 
-    // Validate extPort not already used by another peer, ignoring current rule
-    const conflict = Object.values(config.clients).some(c => {
-      if (!Array.isArray(c.portForwards)) return false;
-      return c.portForwards.some((r, i) => {
-        // If same client and same rule index, skip
-        if (c.id === clientId && i === Number(index)) return false;
-        return r.proto === proto && r.extPort === extPort;
-      });
-    });
-    if (conflict) throw new ServerError(`Puerto ${proto}/${extPort} ya está asignado a otro peer`, 400);
-
-    // Block the WireGuard port
-    if (extPort === Number(this.__serverSettings.port)) {
-      throw new ServerError(`El puerto ${this.__serverSettings.port} está reservado para WireGuard`, 400);
+    // Validate port range
+    const port = Number(extPort);
+    if (!port || port < 1 || port > 65535) {
+      throw new ServerError('Puerto externo inválido (debe ser 1–65535)', 400);
     }
 
-    client.portForwards[index] = { proto, extPort: Number(extPort), intPort: Number(intPort) };
+    // Block reserved ports (WG and admin panel)
+    if (port === Number(this.__serverSettings.port)) {
+      throw new ServerError(`El puerto ${port} está reservado para WireGuard`, 400);
+    }
+    if (port === Number(this.__serverSettings.configPort)) {
+      throw new ServerError(`El puerto ${port} está reservado para el panel de administración`, 400);
+    }
+
+    const idx = Number(index);
+
+    // Validate extPort not already used by the same peer (excluding the rule being updated)
+    const selfConflict = client.portForwards.some((r, i) => i !== idx && r.proto === proto && r.extPort === port);
+    if (selfConflict) throw new ServerError(`El puerto ${proto}/${port} ya está configurado en este peer`, 400);
+
+    // Validate extPort not already used by another peer, ignoring current rule
+    const crossConflict = Object.values(config.clients).some(c => {
+      if (!Array.isArray(c.portForwards)) return false;
+      return c.portForwards.some((r, i) => {
+        if (c.id === clientId && i === idx) return false;
+        return r.proto === proto && r.extPort === port;
+      });
+    });
+    if (crossConflict) throw new ServerError(`El puerto ${proto}/${port} ya está asignado a otro peer`, 400);
+
+    client.portForwards[idx] = { proto, extPort: port, intPort: Number(intPort) };
     await this.saveConfig();
     await this.__applyAllDnatRules();
   }
