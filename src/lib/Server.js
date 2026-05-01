@@ -19,6 +19,7 @@ const {
   toNodeListener,
   readBody,
   setHeader,
+  send,
   serveStatic,
 } = require('h3');
 
@@ -210,8 +211,7 @@ module.exports = class Server {
       .get('/api/wireguard/client/:clientId/configuration/raw', defineEventHandler(async (event) => {
         const clientId = getRouterParam(event, 'clientId');
         const config = await WireGuard.getClientConfiguration({ clientId });
-        setHeader(event, 'Content-Type', 'text/plain');
-        return config;
+        return send(event, config.trim(), 'text/plain');
       }))
       .post('/api/wireguard/client', defineEventHandler(async (event) => {
         const { name } = await readBody(event);
