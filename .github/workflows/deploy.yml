@@ -13,7 +13,7 @@ jobs:
       !contains(github.event.head_commit.message, '!skipci')
     permissions:
       packages: write
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -46,3 +46,19 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.package_version.outputs.version }}
             ghcr.io/${{ github.repository }}:v14-custom
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.package_version.outputs.version }}
+          name: Release v${{ steps.package_version.outputs.version }}
+          body: |
+            Automated Release for version ${{ steps.package_version.outputs.version }}
+            
+            - Docker Image: `ghcr.io/${{ github.repository }}:${{ steps.package_version.outputs.version }}`
+            - Full Dual-Stack IPv6 Support
+            - Automated Port Forwarding for IPv4 & IPv6
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
