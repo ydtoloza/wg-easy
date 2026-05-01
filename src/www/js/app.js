@@ -379,8 +379,11 @@ new Vue({
     },
     viewConfiguration(client) {
       if (!client.downloadableConfig) return;
-      fetch(`./api/wireguard/client/${client.id}/configuration`)
-        .then(res => res.text())
+      fetch(`./api/wireguard/client/${client.id}/configuration/raw`, { credentials: 'include' })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.text();
+        })
         .then(text => {
           this.configDialog = { text };
           this.copyConfigSuccess = false;
