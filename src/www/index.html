@@ -243,7 +243,7 @@
                         <span class="group">
                           <!-- Show -->
                           <input v-show="clientEditAddressId === client.id" v-model="clientEditAddress"
-                            v-on:keyup.enter="updateClientAddress(client, clientEditAddress); clientEditAddress = null; clientEditAddressId = null;"
+                            v-on:keyup.enter="updateClientAddress(client, clientEditAddress, undefined); clientEditAddress = null; clientEditAddressId = null;"
                             v-on:keyup.escape="clientEditAddress = null; clientEditAddressId = null;"
                             :ref="'client-' + client.id + '-address'"
                             class="rounded border-2 dark:bg-neutral-700 border-gray-100 dark:border-neutral-600 focus:border-gray-200 dark:focus:border-neutral-500 outline-none w-20 text-black dark:text-neutral-300 dark:placeholder:text-neutral-500" />
@@ -266,10 +266,10 @@
                           ·
                           <!-- Show V6 -->
                           <input v-show="clientEditAddressV6Id === client.id" v-model="clientEditAddressV6"
-                            v-on:keyup.enter="updateClientAddress(client, null, clientEditAddressV6); clientEditAddressV6 = null; clientEditAddressV6Id = null;"
+                            v-on:keyup.enter="updateClientAddress(client, undefined, clientEditAddressV6); clientEditAddressV6 = null; clientEditAddressV6Id = null;"
                             v-on:keyup.escape="clientEditAddressV6 = null; clientEditAddressV6Id = null;"
                             :ref="'client-' + client.id + '-addressV6'"
-                            class="rounded border-2 dark:bg-neutral-700 border-gray-100 dark:border-neutral-600 focus:border-gray-200 dark:focus:border-neutral-500 outline-none w-32 text-black dark:text-neutral-300 dark:placeholder:text-neutral-500" />
+                            class="rounded border-2 dark:bg-neutral-700 border-gray-100 dark:border-neutral-600 focus:border-gray-200 dark:focus:border-neutral-500 outline-none w-44 text-black dark:text-neutral-300 dark:placeholder:text-neutral-500" />
                           <span v-show="clientEditAddressV6Id !== client.id"
                             class="inline-block ">{{client.addressV6}}</span>
 
