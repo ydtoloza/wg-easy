@@ -17,6 +17,7 @@ const {
   WG_MTU,
   WG_DEFAULT_DNS,
   WG_DEFAULT_ADDRESS,
+  WG_DEFAULT_ADDRESS_V6,
   WG_PERSISTENT_KEEPALIVE,
   WG_ALLOWED_IPS,
   WG_PRE_UP,
@@ -29,12 +30,13 @@ const DUMMY_CLIENT_PREVIEW = {
   id: 'dummy-client-preview',
   name: 'Preview Client (Local)',
   address: '10.8.0.2',
+  addressV6: 'fd42:42:42::2',
   enabled: true,
   createdAt: new Date(),
   updatedAt: new Date(),
   transferRx: 1024 * 1024 * 500,
   transferTx: 1024 * 1024 * 120,
-  allowedIPs: ['10.8.0.2/32'],
+  allowedIPs: ['10.8.0.2/32', 'fd42:42:42::2/128'],
   publicKey: 'mockPublicKey=',
   downloadableConfig: false,
   persistentKeepalive: null,
@@ -56,6 +58,7 @@ module.exports = class WireGuard {
       device: process.env.WG_DEVICE || 'eth0',
       defaultDns: WG_DEFAULT_DNS,
       defaultAddress: WG_DEFAULT_ADDRESS,
+      defaultAddressV6: WG_DEFAULT_ADDRESS_V6,
       mtu: WG_MTU,
       allowedIps: WG_ALLOWED_IPS,
       persistentKeepalive: WG_PERSISTENT_KEEPALIVE,
@@ -83,12 +86,14 @@ module.exports = class WireGuard {
         log: 'echo ***hidden*** | wg pubkey',
       });
       const address = this.__serverSettings.defaultAddress.replace('x', '1');
+      const addressV6 = this.__serverSettings.defaultAddressV6.replace('x', '1');
 
       config = {
         server: {
           privateKey,
           publicKey,
           address,
+          addressV6,
         },
         clients: {},
       };
@@ -99,6 +104,32 @@ module.exports = class WireGuard {
     for (const client of Object.values(config.clients)) {
       if (!Array.isArray(client.portForwards)) {
         client.portForwards = [];
+      }
+    }
+
+    // Migrate legacy server config: ensure server has addressV6
+    if (!config.server.addressV6) {
+      config.server.addressV6 = this.__serverSettings.defaultAddressV6.replace('x', '1');
+      debug('Migrated server to include addressV6.');
+    }
+
+    // Migrate legacy clients: assign addressV6 to any client missing it
+    const usedV6 = new Set(
+      Object.values(config.clients)
+        .filter((c) => c.addressV6)
+        .map((c) => c.addressV6)
+    );
+    for (const client of Object.values(config.clients)) {
+      if (!client.addressV6) {
+        for (let i = 2; i < 255; i++) {
+          const candidate = this.__serverSettings.defaultAddressV6.replace('x', i);
+          if (!usedV6.has(candidate)) {
+            client.addressV6 = candidate;
+            usedV6.add(candidate);
+            debug(`Migrated client ${client.name} → addressV6: ${candidate}`);
+            break;
+          }
+        }
       }
     }
 
@@ -163,7 +194,7 @@ module.exports = class WireGuard {
 # Server
 [Interface]
 PrivateKey = ${config.server.privateKey}
-Address = ${config.server.address}/24
+Address = ${config.server.address}/24${config.server.addressV6 ? `, ${config.server.addressV6}/64` : ''}
 ListenPort = ${this.__serverSettings.port}
 PreUp = ${WG_PRE_UP}
 PostUp = ${WG_POST_UP}
@@ -180,7 +211,7 @@ PostDown = ${WG_POST_DOWN}
 [Peer]
 PublicKey = ${client.publicKey}
 ${client.preSharedKey ? `PresharedKey = ${client.preSharedKey}\n` : ''
-}AllowedIPs = ${client.address}/32`;
+}AllowedIPs = ${client.address}/32${client.addressV6 ? `, ${client.addressV6}/128` : ''}`;
     }
 
     debug('Config saving...');
@@ -213,7 +244,8 @@ ${client.preSharedKey ? `PresharedKey = ${client.preSharedKey}\n` : ''
       publicKey: client.publicKey,
       createdAt: new Date(client.createdAt),
       updatedAt: new Date(client.updatedAt),
-      allowedIPs: client.allowedIPs,
+      allowedIPs: client.allowedIPs || [client.address + '/32', (client.addressV6 ? client.addressV6 + '/128' : null)].filter(Boolean),
+      addressV6: client.addressV6,
       portForwards: Array.isArray(client.portForwards) ? client.portForwards : [],
       downloadableConfig: 'privateKey' in client,
       persistentKeepalive: null,
@@ -273,7 +305,7 @@ ${client.preSharedKey ? `PresharedKey = ${client.preSharedKey}\n` : ''
     return `
 [Interface]
 PrivateKey = ${client.privateKey ? `${client.privateKey}` : 'REPLACE_ME'}
-Address = ${client.address}/24
+Address = ${client.address}/24${client.addressV6 ? `, ${client.addressV6}/128` : ''}
 ${this.__serverSettings.defaultDns ? `DNS = ${this.__serverSettings.defaultDns}\n` : ''}\
 ${this.__serverSettings.mtu ? `MTU = ${this.__serverSettings.mtu}\n` : ''}\
 
@@ -308,13 +340,16 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
 
     // Calculate next IP
     let address;
+    let addressV6;
     for (let i = 2; i < 255; i++) {
       const client = Object.values(config.clients).find((client) => {
-        return client.address === this.__serverSettings.defaultAddress.replace('x', i);
+        return client.address === this.__serverSettings.defaultAddress.replace('x', i) ||
+               client.addressV6 === this.__serverSettings.defaultAddressV6.replace('x', i);
       });
 
       if (!client) {
         address = this.__serverSettings.defaultAddress.replace('x', i);
+        addressV6 = this.__serverSettings.defaultAddressV6.replace('x', i);
         break;
       }
     }
@@ -329,6 +364,7 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
       id,
       name,
       address,
+      addressV6,
       privateKey,
       publicKey,
       preSharedKey,
@@ -385,14 +421,19 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
     await this.saveConfig();
   }
 
-  async updateClientAddress({ clientId, address }) {
+  async updateClientAddress({ clientId, address, addressV6 }) {
     const client = await this.getClient({ clientId });
 
-    if (!Util.isValidIPv4(address)) {
-      throw new ServerError(`Invalid Address: ${address}`, 400);
+    if (address && !Util.isValidIPv4(address)) {
+      throw new ServerError(`Invalid IPv4 Address: ${address}`, 400);
     }
 
-    client.address = address;
+    if (addressV6 && !Util.isValidIPv6(addressV6)) {
+      throw new ServerError(`Invalid IPv6 Address: ${addressV6}`, 400);
+    }
+
+    if (address) client.address = address;
+    if (addressV6) client.addressV6 = addressV6;
     client.updatedAt = new Date();
 
     await this.saveConfig();
@@ -447,7 +488,7 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
     await this.getConfig();
 
     const allowed = ['host', 'port', 'configPort', 'device', 'defaultDns',
-      'defaultAddress', 'mtu', 'allowedIps', 'persistentKeepalive'];
+      'defaultAddress', 'defaultAddressV6', 'mtu', 'allowedIps', 'persistentKeepalive'];
 
     for (const key of allowed) {
       if (settings[key] !== undefined) {
@@ -472,15 +513,23 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
     try {
       await Util.exec('nft add table ip wgeasy_dnat');
       await Util.exec('nft add chain ip wgeasy_dnat prerouting { type nat hook prerouting priority dstnat; policy accept; }');
-      debug('nftables table/chain ensured.');
+      debug('nftables IPv4 table/chain ensured.');
+    } catch (err) {
+      // It might already exist, which is fine
+    }
+    try {
+      await Util.exec('nft add table ip6 wgeasy_dnat');
+      await Util.exec('nft add chain ip6 wgeasy_dnat prerouting { type nat hook prerouting priority dstnat; policy accept; }');
+      debug('nftables IPv6 table/chain ensured.');
     } catch (err) {
       // It might already exist, which is fine
     }
   }
 
   async __applyAllDnatRules() {
-    // Flush existing rules
+    // Flush existing rules (IPv4 + IPv6)
     await Util.exec('nft flush chain ip wgeasy_dnat prerouting').catch(() => {});
+    await Util.exec('nft flush chain ip6 wgeasy_dnat prerouting').catch(() => {});
 
     // Use config directly
     const config = await this.getConfig();
@@ -488,17 +537,26 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
       if (!client.enabled || !client.portForwards || !client.portForwards.length) continue;
       
       const peerIP = client.address.split('/')[0];
+      const peerIPv6 = client.addressV6 ? client.addressV6.split('/')[0] : null;
+
       for (const rule of client.portForwards) {
         const { proto, extPort, intPort } = rule;
         const protocols = proto === 'both' ? ['tcp', 'udp'] : [proto];
         
         for (const p of protocols) {
-          const cmd = `nft add rule ip wgeasy_dnat prerouting ${p} dport ${extPort} dnat to ${peerIP}:${intPort}`;
-          await Util.exec(cmd).catch((err) => debug(`Error applying DNAT rule: ${err.message}`));
+          // IPv4 DNAT rule
+          const cmd4 = `nft add rule ip wgeasy_dnat prerouting ${p} dport ${extPort} dnat to ${peerIP}:${intPort}`;
+          await Util.exec(cmd4).catch((err) => debug(`Error applying IPv4 DNAT rule: ${err.message}`));
+
+          // IPv6 DNAT rule (only if client has an IPv6 address)
+          if (peerIPv6) {
+            const cmd6 = `nft add rule ip6 wgeasy_dnat prerouting ${p} dport ${extPort} dnat to [${peerIPv6}]:${intPort}`;
+            await Util.exec(cmd6).catch((err) => debug(`Error applying IPv6 DNAT rule: ${err.message}`));
+          }
         }
       }
     }
-    debug('All DNAT rules applied.');
+    debug('All DNAT rules applied (IPv4 + IPv6).');
   }
 
   async addPortForward(clientId, proto, extPort, intPort) {

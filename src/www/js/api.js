@@ -131,11 +131,11 @@ class API {
     });
   }
 
-  async updateClientAddress({ clientId, address }) {
+  async updateClientAddress({ clientId, address, addressV6 }) {
     return this.call({
       method: 'put',
       path: `/wireguard/client/${clientId}/address/`,
-      body: { address },
+      body: { address, addressV6 },
     });
   }
 

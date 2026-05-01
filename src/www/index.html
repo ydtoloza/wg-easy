@@ -243,7 +243,7 @@
                         <span class="group">
                           <!-- Show -->
                           <input v-show="clientEditAddressId === client.id" v-model="clientEditAddress"
-                            v-on:keyup.enter="updateClientAddress(client, clientEditAddress); clientEditAddress = null; clientEditAddressId = null;"
+                            v-on:keyup.enter="updateClientAddress(client, clientEditAddress, undefined); clientEditAddress = null; clientEditAddressId = null;"
                             v-on:keyup.escape="clientEditAddress = null; clientEditAddressId = null;"
                             :ref="'client-' + client.id + '-address'"
                             class="rounded border-2 dark:bg-neutral-700 border-gray-100 dark:border-neutral-600 focus:border-gray-200 dark:focus:border-neutral-500 outline-none w-20 text-black dark:text-neutral-300 dark:placeholder:text-neutral-500" />
@@ -253,6 +253,29 @@
                           <!-- Edit -->
                           <span v-show="clientEditAddressId !== client.id"
                             @click="clientEditAddress = client.address; clientEditAddressId = client.id; setTimeout(() => $refs['client-' + client.id + '-address'][0].select(), 1);"
+                            class="cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                              class="h-4 w-4 inline align-middle opacity-25 hover:opacity-100" fill="none"
+                              viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </span>
+                        </span>
+                        <span v-if="client.addressV6" class="group ml-2">
+                          ·
+                          <!-- Show V6 -->
+                          <input v-show="clientEditAddressV6Id === client.id" v-model="clientEditAddressV6"
+                            v-on:keyup.enter="updateClientAddress(client, undefined, clientEditAddressV6); clientEditAddressV6 = null; clientEditAddressV6Id = null;"
+                            v-on:keyup.escape="clientEditAddressV6 = null; clientEditAddressV6Id = null;"
+                            :ref="'client-' + client.id + '-addressV6'"
+                            class="rounded border-2 dark:bg-neutral-700 border-gray-100 dark:border-neutral-600 focus:border-gray-200 dark:focus:border-neutral-500 outline-none w-44 text-black dark:text-neutral-300 dark:placeholder:text-neutral-500" />
+                          <span v-show="clientEditAddressV6Id !== client.id"
+                            class="inline-block ">{{client.addressV6}}</span>
+
+                          <!-- Edit V6 -->
+                          <span v-show="clientEditAddressV6Id !== client.id"
+                            @click="clientEditAddressV6 = client.addressV6; clientEditAddressV6Id = client.id; setTimeout(() => $refs['client-' + client.id + '-addressV6'][0].select(), 1);"
                             class="cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
                             <svg xmlns="http://www.w3.org/2000/svg"
                               class="h-4 w-4 inline align-middle opacity-25 hover:opacity-100" fill="none"
@@ -784,9 +807,14 @@
                           class="rounded p-2 border-2 dark:bg-neutral-600 dark:text-neutral-200 border-gray-100 dark:border-neutral-500 focus:border-red-800 dark:focus:border-red-700 outline-none w-full text-sm" placeholder="1.1.1.1, 8.8.8.8" />
                       </div>
                       <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-neutral-400 mb-1 uppercase tracking-wider">Default Address Range</label>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-neutral-400 mb-1 uppercase tracking-wider">Default Address Range (IPv4)</label>
                         <input type="text" v-model="serverConfigEdit.defaultAddress"
                           class="rounded p-2 border-2 dark:bg-neutral-600 dark:text-neutral-200 border-gray-100 dark:border-neutral-500 focus:border-red-800 dark:focus:border-red-700 outline-none w-full text-sm" placeholder="10.8.0.x" />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-neutral-400 mb-1 uppercase tracking-wider">Default Address Range (IPv6)</label>
+                        <input type="text" v-model="serverConfigEdit.defaultAddressV6"
+                          class="rounded p-2 border-2 dark:bg-neutral-600 dark:text-neutral-200 border-gray-100 dark:border-neutral-500 focus:border-red-800 dark:focus:border-red-700 outline-none w-full text-sm" placeholder="fd42:42:42::x" />
                       </div>
                       <div>
                         <label class="block text-xs font-semibold text-gray-500 dark:text-neutral-400 mb-1 uppercase tracking-wider">Allowed IPs</label>

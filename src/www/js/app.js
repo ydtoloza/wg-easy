@@ -64,6 +64,8 @@ new Vue({
     clientEditNameId: null,
     clientEditAddress: null,
     clientEditAddressId: null,
+    clientEditAddressV6: null,
+    clientEditAddressV6Id: null,
     qrcode: null,
     newPf: {},
     pfError: null,
@@ -352,8 +354,8 @@ new Vue({
         .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },
-    updateClientAddress(client, address) {
-      this.api.updateClientAddress({ clientId: client.id, address })
+    updateClientAddress(client, address, addressV6) {
+      this.api.updateClientAddress({ clientId: client.id, address, addressV6 })
         .catch((err) => this.notify(err.message || err.toString()))
         .finally(() => this.refresh().catch(console.error));
     },

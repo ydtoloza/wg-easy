@@ -247,8 +247,8 @@ module.exports = class Server {
         if (clientId === '__proto__' || clientId === 'constructor' || clientId === 'prototype') {
           throw createError({ status: 403 });
         }
-        const { address } = await readBody(event);
-        await WireGuard.updateClientAddress({ clientId, address });
+        const { address, addressV6 } = await readBody(event);
+        await WireGuard.updateClientAddress({ clientId, address, addressV6 });
         return { success: true };
       }))
       .post('/api/wireguard/client/:clientId/port-forward', defineEventHandler(async (event) => {
