@@ -598,10 +598,10 @@
           <div class="absolute inset-0 bg-black opacity-60" @click="configDialog = null; copyConfigSuccess = false;"></div>
           <!-- Modal -->
           <div class="relative z-10 rounded-lg shadow-2xl"
-               style="background:#1f1f1f;border:1px solid #3a3a3a;width:fit-content;min-width:380px;max-width:90vw;"
+               style="background:#1f1f1f;border:1px solid #3a3a3a;max-width:92vw;max-height:90vh;display:flex;flex-direction:column;"
                role="dialog" aria-modal="true">
             <!-- Header -->
-            <div class="flex items-center justify-between px-3 py-2" style="border-bottom:1px solid #3a3a3a;">
+            <div class="flex items-center justify-between px-3 py-2" style="border-bottom:1px solid #3a3a3a;flex-shrink:0;">
               <span style="color:#ccc;font-size:12px;font-weight:600;">Configuración del cliente</span>
               <div class="flex items-center" style="gap:6px;">
                 <button @click="copyConfigToClipboard()"
@@ -617,9 +617,8 @@
                 </button>
               </div>
             </div>
-            <div style="padding:8px;">
-              <textarea readonly
-                style="display:block;width:100%;font-family:monospace;font-size:12px;line-height:1.55;padding:10px 12px;background:#111;color:#d4d4d4;border:1px solid #333;border-radius:4px;resize:none;outline:none;height:210px;white-space:pre;">{{ configDialog.text }}</textarea>
+            <div style="padding:8px;overflow:auto;">
+              <pre style="margin:0;padding:10px 14px;background:#111;color:#d4d4d4;border:1px solid #333;border-radius:4px;font-family:monospace;font-size:12px;line-height:1.6;white-space:pre;">{{ configDialog.text }}</pre>
             </div>
           </div>
         </div>
