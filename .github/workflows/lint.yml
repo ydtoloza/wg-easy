@@ -20,6 +20,7 @@ jobs:
           node-version: '20'
           check-latest: true
           cache: 'npm'
+          cache-dependency-path: 'src/package-lock.json'
 
       - name: npm run lint
         run: |
