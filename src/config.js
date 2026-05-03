@@ -24,25 +24,25 @@ module.exports.WG_ALLOWED_IPS = process.env.WG_ALLOWED_IPS || '0.0.0.0/0, ::/0';
 
 module.exports.WG_PRE_UP = process.env.WG_PRE_UP || '';
 module.exports.WG_POST_UP = process.env.WG_POST_UP || `
-nft add table ip wg-easy;
-nft add chain ip wg-easy postrouting { type nat hook postrouting priority srcnat\\; };
-nft add rule ip wg-easy postrouting ip saddr ${module.exports.WG_DEFAULT_ADDRESS.replace('x', '0')}/24 oifname ${module.exports.WG_DEVICE} masquerade;
-nft add chain ip wg-easy forward { type filter hook forward priority filter\\; };
-nft add rule ip wg-easy forward iifname wg0 accept;
-nft add rule ip wg-easy forward oifname wg0 accept;
-nft add table ip6 wg-easy;
-nft add chain ip6 wg-easy postrouting { type nat hook postrouting priority srcnat\\; };
-nft add rule ip6 wg-easy postrouting ip6 saddr ${module.exports.WG_DEFAULT_ADDRESS_V6.replace('x', '0')}/64 oifname ${module.exports.WG_DEVICE} masquerade;
-nft add chain ip6 wg-easy forward { type filter hook forward priority filter\\; };
-nft add rule ip6 wg-easy forward iifname wg0 accept;
-nft add rule ip6 wg-easy forward oifname wg0 accept;
-`.split('\n').join(' ').trim();
+iptables -t nat -A POSTROUTING -s ${module.exports.WG_DEFAULT_ADDRESS.replace('x', '0')}/24 -o ${module.exports.WG_DEVICE} -j MASQUERADE;
+ip6tables -t nat -A POSTROUTING -s ${module.exports.WG_DEFAULT_ADDRESS_V6.replace('x', '0')}/64 -o ${module.exports.WG_DEVICE} -j MASQUERADE;
+iptables -A INPUT -p udp -m udp --dport ${module.exports.WG_PORT} -j ACCEPT;
+iptables -A FORWARD -i wg0 -j ACCEPT;
+iptables -A FORWARD -o wg0 -j ACCEPT;
+ip6tables -A FORWARD -i wg0 -j ACCEPT;
+ip6tables -A FORWARD -o wg0 -j ACCEPT;
+`.split('\n').join(' ');
 
 module.exports.WG_PRE_DOWN = process.env.WG_PRE_DOWN || '';
 module.exports.WG_POST_DOWN = process.env.WG_POST_DOWN || `
-nft delete table ip wg-easy;
-nft delete table ip6 wg-easy;
-`.split('\n').join(' ').trim();
+iptables -t nat -D POSTROUTING -s ${module.exports.WG_DEFAULT_ADDRESS.replace('x', '0')}/24 -o ${module.exports.WG_DEVICE} -j MASQUERADE;
+ip6tables -t nat -D POSTROUTING -s ${module.exports.WG_DEFAULT_ADDRESS_V6.replace('x', '0')}/64 -o ${module.exports.WG_DEVICE} -j MASQUERADE;
+iptables -D INPUT -p udp -m udp --dport ${module.exports.WG_PORT} -j ACCEPT;
+iptables -D FORWARD -i wg0 -j ACCEPT;
+iptables -D FORWARD -o wg0 -j ACCEPT;
+ip6tables -D FORWARD -i wg0 -j ACCEPT;
+ip6tables -D FORWARD -o wg0 -j ACCEPT;
+`.split('\n').join(' ');
 module.exports.LANG = process.env.LANG || 'en';
 module.exports.UI_TRAFFIC_STATS = process.env.UI_TRAFFIC_STATS || 'false';
 module.exports.UI_CHART_TYPE = process.env.UI_CHART_TYPE || 0;

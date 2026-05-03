@@ -103,7 +103,7 @@ Deploying this fork is as simple as running a `docker-compose.yml` file.
 
 Ensure your host system meets the following requirements:
 * Docker & Docker Compose installed.
-* `nftables` available on the host system (standard in Debian 10+, Ubuntu 20.04+, etc.).
+* `nftables` and `iptables` available on the host system (required for port forwarding and Docker routing compatibility).
 * WireGuard kernel module loaded.
 
 #### Example `docker-compose.yml`
