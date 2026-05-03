@@ -185,7 +185,7 @@ new Vue({
       setTimeout(() => this.dismissToast(id), duration);
     },
     dismissToast(id) {
-      const idx = this.toasts.findIndex(t => t.id === id);
+      const idx = this.toasts.findIndex((t) => t.id === id);
       if (idx !== -1) this.toasts.splice(idx, 1);
     },
     // ─────────────────────────────────────────────────────────────────────
@@ -216,13 +216,9 @@ new Vue({
       if (!pf || !pf.extPort) return false;
       const port = Number(pf.extPort);
       const proto = pf.proto || 'tcp';
-      return this.clients.some(c =>
-        Array.isArray(c.portForwards) &&
-        c.portForwards.some(r => 
-          (r.proto === proto || r.proto === 'both' || proto === 'both') && 
-          r.extPort === port
-        )
-      );
+      return this.clients.some((c) => Array.isArray(c.portForwards)
+        && c.portForwards.some((r) => (r.proto === proto || r.proto === 'both' || proto === 'both')
+          && r.extPort === port));
     },
     async refresh({
       updateCharts = false,
@@ -380,24 +376,26 @@ new Vue({
     viewConfiguration(client) {
       if (!client.downloadableConfig) return;
       fetch(`./api/wireguard/client/${client.id}/configuration/raw`, { credentials: 'include' })
-        .then(res => {
+        .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.text();
         })
-        .then(text => {
+        .then((text) => {
           this.configDialog = { text };
           this.copyConfigSuccess = false;
         })
-        .catch(err => this.notify('Error al obtener la configuración: ' + err.message));
+        .catch((err) => this.notify(`Error al obtener la configuración: ${err.message}`));
     },
     copyConfigToClipboard() {
       if (!this.configDialog || !this.configDialog.text) return;
-      const text = this.configDialog.text;
+      const { text } = this.configDialog;
       // Try modern clipboard API first (requires HTTPS)
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => {
           this.copyConfigSuccess = true;
-          setTimeout(() => { this.copyConfigSuccess = false; }, 3000);
+          setTimeout(() => {
+            this.copyConfigSuccess = false;
+          }, 3000);
         }).catch(() => this._fallbackCopy(text));
       } else {
         // Fallback for HTTP
@@ -415,7 +413,9 @@ new Vue({
       try {
         document.execCommand('copy');
         this.copyConfigSuccess = true;
-        setTimeout(() => { this.copyConfigSuccess = false; }, 3000);
+        setTimeout(() => {
+          this.copyConfigSuccess = false;
+        }, 3000);
       } catch (err) {
         this.notify('No se pudo copiar al portapapeles.');
       }
@@ -430,13 +430,9 @@ new Vue({
       // Client-side duplicate check (all peers)
       const extPort = Number(pf.extPort);
       const proto = pf.proto || 'tcp';
-      const alreadyUsed = this.clients.some(c =>
-        Array.isArray(c.portForwards) &&
-        c.portForwards.some(r => 
-          (r.proto === proto || r.proto === 'both' || proto === 'both') && 
-          r.extPort === extPort
-        )
-      );
+      const alreadyUsed = this.clients.some((c) => Array.isArray(c.portForwards)
+        && c.portForwards.some((r) => (r.proto === proto || r.proto === 'both' || proto === 'both')
+          && r.extPort === extPort));
       if (alreadyUsed) {
         this.pfError = { clientId: client.id, msg: `El puerto ${proto}/${extPort} ya está en uso.` };
         return;
@@ -446,17 +442,17 @@ new Vue({
         clientId: client.id,
         proto,
         extPort,
-        intPort: pf.intPort
+        intPort: pf.intPort,
       })
-      .then(() => {
-        this.$set(this.newPf, client.id, { proto: 'tcp', extPort: null, intPort: null });
-        this.$set(this.expandedPfClients, client.id, true);
-        this.pfError = null;
-      })
-      .catch((err) => {
-        this.pfError = { clientId: client.id, msg: err.message || err.toString() };
-      })
-      .finally(() => this.refresh().catch(console.error));
+        .then(() => {
+          this.$set(this.newPf, client.id, { proto: 'tcp', extPort: null, intPort: null });
+          this.$set(this.expandedPfClients, client.id, true);
+          this.pfError = null;
+        })
+        .catch((err) => {
+          this.pfError = { clientId: client.id, msg: err.message || err.toString() };
+        })
+        .finally(() => this.refresh().catch(console.error));
     },
     removePortForward(client, index) {
       this.pfDelete = { client, index, rule: client.portForwards[index] };
@@ -490,13 +486,11 @@ new Vue({
       const extPort = Number(this.editingPfRule.extPort);
       const proto = this.editingPfRule.proto || 'tcp';
       const idx = this.editingPfIndex;
-      const alreadyUsed = this.clients.some(c =>
-        Array.isArray(c.portForwards) &&
-        c.portForwards.some((r, i) => {
+      const alreadyUsed = this.clients.some((c) => Array.isArray(c.portForwards)
+        && c.portForwards.some((r, i) => {
           if (c.id === client.id && i === idx) return false;
           return (r.proto === proto || r.proto === 'both' || proto === 'both') && r.extPort === extPort;
-        })
-      );
+        }));
       if (alreadyUsed) {
         this.pfError = { clientId: client.id, msg: `El puerto ${proto}/${extPort} ya está en uso.` };
         return;
@@ -507,16 +501,16 @@ new Vue({
         index: idx,
         proto,
         extPort,
-        intPort: this.editingPfRule.intPort
+        intPort: this.editingPfRule.intPort,
       })
-      .then(() => {
-        this.cancelEditPortForward();
-        this.pfError = null;
-      })
-      .catch((err) => {
-        this.pfError = { clientId: client.id, msg: err.message || err.toString() };
-      })
-      .finally(() => this.refresh().catch(console.error));
+        .then(() => {
+          this.cancelEditPortForward();
+          this.pfError = null;
+        })
+        .catch((err) => {
+          this.pfError = { clientId: client.id, msg: err.message || err.toString() };
+        })
+        .finally(() => this.refresh().catch(console.error));
     },
     // Server Config methods
     openServerConfig() {

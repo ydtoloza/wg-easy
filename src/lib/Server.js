@@ -170,7 +170,6 @@ module.exports = class Server {
         res.statusCode = 401;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: 'Not Logged In' }));
-        return;
       }),
     );
 

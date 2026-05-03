@@ -147,7 +147,9 @@ class API {
     });
   }
 
-  async addPortForward({ clientId, proto, extPort, intPort }) {
+  async addPortForward({
+    clientId, proto, extPort, intPort,
+  }) {
     return this.call({
       method: 'post',
       path: `/wireguard/client/${clientId}/port-forward`,
@@ -162,7 +164,9 @@ class API {
     });
   }
 
-  async updatePortForward({ clientId, index, proto, extPort, intPort }) {
+  async updatePortForward({
+    clientId, index, proto, extPort, intPort,
+  }) {
     return this.call({
       method: 'put',
       path: `/wireguard/client/${clientId}/port-forward/${index}`,

@@ -43,8 +43,8 @@ const DUMMY_CLIENT_PREVIEW = {
   latestHandshakeAt: new Date(),
   portForwards: [
     { proto: 'tcp', extPort: 8080, intPort: 80 },
-    { proto: 'udp', extPort: 27015, intPort: 27015 }
-  ]
+    { proto: 'udp', extPort: 27015, intPort: 27015 },
+  ],
 };
 
 module.exports = class WireGuard {
@@ -118,22 +118,22 @@ module.exports = class WireGuard {
     if (this.__serverSettings.enableIpv6) {
       const usedV6 = new Set(
         Object.values(config.clients)
-        .filter((c) => c.addressV6)
-        .map((c) => c.addressV6)
-    );
-    for (const client of Object.values(config.clients)) {
-      if (!client.addressV6) {
-        for (let i = 2; i < 255; i++) {
-          const candidate = this.__serverSettings.defaultAddressV6.replace('x', i);
-          if (!usedV6.has(candidate)) {
-            client.addressV6 = candidate;
-            usedV6.add(candidate);
-            debug(`Migrated client ${client.name} → addressV6: ${candidate}`);
-            break;
+          .filter((c) => c.addressV6)
+          .map((c) => c.addressV6),
+      );
+      for (const client of Object.values(config.clients)) {
+        if (!client.addressV6) {
+          for (let i = 2; i < 255; i++) {
+            const candidate = this.__serverSettings.defaultAddressV6.replace('x', i);
+            if (!usedV6.has(candidate)) {
+              client.addressV6 = candidate;
+              usedV6.add(candidate);
+              debug(`Migrated client ${client.name} → addressV6: ${candidate}`);
+              break;
+            }
           }
         }
       }
-    }
     }
 
     // Load persisted server settings if available
@@ -176,7 +176,7 @@ module.exports = class WireGuard {
       await this.__syncConfig();
       await this.__ensureNftablesSetup();
       await this.__applyAllDnatRules();
-      
+
       debug('WireGuard initialization completed.');
     })();
 
@@ -247,7 +247,7 @@ ${client.preSharedKey ? `PresharedKey = ${client.preSharedKey}\n` : ''
       publicKey: client.publicKey,
       createdAt: new Date(client.createdAt),
       updatedAt: new Date(client.updatedAt),
-      allowedIPs: client.allowedIPs || [client.address + '/32', (this.__serverSettings.enableIpv6 && client.addressV6 ? client.addressV6 + '/128' : null)].filter(Boolean),
+      allowedIPs: client.allowedIPs || [`${client.address}/32`, (this.__serverSettings.enableIpv6 && client.addressV6 ? `${client.addressV6}/128` : null)].filter(Boolean),
       addressV6: client.addressV6,
       portForwards: Array.isArray(client.portForwards) ? client.portForwards : [],
       downloadableConfig: 'privateKey' in client,
@@ -346,8 +346,8 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
     let addressV6;
     for (let i = 2; i < 255; i++) {
       const client = Object.values(config.clients).find((client) => {
-        return client.address === this.__serverSettings.defaultAddress.replace('x', i) ||
-               (this.__serverSettings.enableIpv6 && client.addressV6 === this.__serverSettings.defaultAddressV6.replace('x', i));
+        return client.address === this.__serverSettings.defaultAddress.replace('x', i)
+               || (this.__serverSettings.enableIpv6 && client.addressV6 === this.__serverSettings.defaultAddressV6.replace('x', i));
       });
 
       if (!client) {
@@ -538,14 +538,14 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
     const config = await this.getConfig();
     for (const client of Object.values(config.clients)) {
       if (!client.enabled || !client.portForwards || !client.portForwards.length) continue;
-      
+
       const peerIP = client.address.split('/')[0];
       const peerIPv6 = (this.__serverSettings.enableIpv6 && client.addressV6) ? client.addressV6.split('/')[0] : null;
 
       for (const rule of client.portForwards) {
         const { proto, extPort, intPort } = rule;
         const protocols = proto === 'both' ? ['tcp', 'udp'] : [proto];
-        
+
         for (const p of protocols) {
           // IPv4 DNAT rule
           const cmd4 = `nft add rule ip wgeasy_dnat prerouting ${p} dport ${extPort} dnat to ${peerIP}:${intPort}`;
@@ -589,21 +589,15 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
     }
 
     // Validate extPort not already used by the same peer
-    const selfConflict = client.portForwards.some(r => 
-      (r.proto === proto || r.proto === 'both' || proto === 'both') && 
-      r.extPort === port
-    );
+    const selfConflict = client.portForwards.some((r) => (r.proto === proto || r.proto === 'both' || proto === 'both')
+      && r.extPort === port);
     if (selfConflict) throw new ServerError(`El puerto ${proto}/${port} ya está configurado en este peer`, 400);
 
     // Validate extPort not already used by another peer
-    const crossConflict = Object.values(config.clients).some(c =>
-      c.id !== clientId &&
-      Array.isArray(c.portForwards) &&
-      c.portForwards.some(r => 
-        (r.proto === proto || r.proto === 'both' || proto === 'both') && 
-        r.extPort === port
-      )
-    );
+    const crossConflict = Object.values(config.clients).some((c) => c.id !== clientId
+      && Array.isArray(c.portForwards)
+      && c.portForwards.some((r) => (r.proto === proto || r.proto === 'both' || proto === 'both')
+        && r.extPort === port));
     if (crossConflict) throw new ServerError(`El puerto ${proto}/${port} ya está asignado a otro peer`, 400);
 
     client.portForwards.push({ proto, extPort: port, intPort: Number(intPort) });
@@ -659,15 +653,13 @@ Endpoint = ${this.__serverSettings.host}:${this.__serverSettings.configPort}`;
     const idx = Number(index);
 
     // Validate extPort not already used by the same peer (excluding the rule being updated)
-    const selfConflict = client.portForwards.some((r, i) => 
-      i !== idx && 
-      (r.proto === proto || r.proto === 'both' || proto === 'both') && 
-      r.extPort === port
-    );
+    const selfConflict = client.portForwards.some((r, i) => i !== idx
+      && (r.proto === proto || r.proto === 'both' || proto === 'both')
+      && r.extPort === port);
     if (selfConflict) throw new ServerError(`El puerto ${proto}/${port} ya está configurado en este peer`, 400);
 
     // Validate extPort not already used by another peer, ignoring current rule
-    const crossConflict = Object.values(config.clients).some(c => {
+    const crossConflict = Object.values(config.clients).some((c) => {
       if (!Array.isArray(c.portForwards)) return false;
       return c.portForwards.some((r, i) => {
         if (c.id === clientId && i === idx) return false;
