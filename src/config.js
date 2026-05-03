@@ -36,8 +36,6 @@ nft add rule ip6 wg-easy postrouting ip6 saddr ${module.exports.WG_DEFAULT_ADDRE
 nft add chain ip6 wg-easy forward { type filter hook forward priority filter\\; };
 nft add rule ip6 wg-easy forward iifname wg0 accept;
 nft add rule ip6 wg-easy forward oifname wg0 accept;
-sysctl -w net.ipv4.ip_forward=1;
-sysctl -w net.ipv6.conf.all.forwarding=1;
 `.split('\n').join(' ').trim();
 
 module.exports.WG_PRE_DOWN = process.env.WG_PRE_DOWN || '';
